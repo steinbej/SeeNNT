@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeeNNT</title>
+<style>
+  :root { --bg:#eef0f3; --panel:#ffffff; --ink:#1d2330; --muted:#5d6675; --line:#d9dde3; --accent:#1d4f91; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 14px/1.4 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); display: flex; }
+  aside { width: 360px; flex: none; height: 100vh; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 14px 16px 48px; }
+  main { flex: 1; height: 100vh; padding: 18px; display: flex; }
+  #figure { flex: 1; min-width: 0; min-height: 0; }
+  #figure svg { display: block; width: 100%; height: 100%; }
+  h1 { font-size: 17px; margin: 2px 0 4px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
+  section { border-top: 1px solid var(--line); padding: 10px 0 6px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  label { display: block; margin: 0 0 7px; }
+  label.inline { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  input[type=text], input[type=number], select { width: 100%; padding: 5px 7px; border: 1px solid #c4c9d1; border-radius: 5px; font: inherit; background: #fff; }
+  input[type=number] { text-align: right; }
+  .lbl { font-size: 12px; color: var(--muted); display: block; margin-bottom: 2px; }
+  .colors { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .colors label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; }
+  input[type=color] { width: 34px; height: 24px; padding: 0; border: 1px solid #c4c9d1; border-radius: 4px; background: none; flex: none; }
+  button { font: inherit; padding: 7px 10px; border-radius: 6px; border: 1px solid #b9c0ca; background: #f7f8fa; cursor: pointer; }
+  button:hover { background: #eceff3; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .hidden { display: none !important; }
+  #msg { color: #b00020; font-size: 13px; min-height: 0; margin: 4px 0; }
+  .hint { font-size: 12px; color: var(--muted); margin: -3px 0 7px; }
+  .evrow { display: grid; grid-template-columns: 1fr 70px 14px 70px; gap: 5px; align-items: center; margin-bottom: 6px; }
+  .evrow span.of { text-align: center; color: var(--muted); }
+
+  /* Presentation mode */
+  #exitPresent { position: fixed; top: 10px; right: 12px; opacity: .25; z-index: 10; }
+  #exitPresent:hover { opacity: 1; }
+  body:not(.present) #exitPresent { display: none; }
+  body.present aside { display: none; }
+  body.present main { padding: 6px; }
+
+  @media print {
+    @page { size: landscape; margin: 10mm; }
+    body { display: block; background: #fff; }
+    aside, #exitPresent { display: none !important; }
+    main { height: auto; padding: 0; display: block; }
+    #figure svg { width: 100%; height: auto; max-height: 185mm; }
+  }
+</style>
+</head>
+<body>
+<aside id="controls">
+  <h1>SeeNNT</h1>
+  <p class="sub">Icon arrays for teaching absolute risk and NNT. One icon per person.</p>
+
+  <section>
+    <h2>Start from an example or from scratch</h2>
+    <select id="example">
+      <option value="abx" selected>Antibiotic cure: 97% vs 85%</option>
+      <option value="flu">Influenza vaccine: illness 2.0% vs 2.8%</option>
+      <option value="blank">Blank case from scratch</option>
+    </select>
+    <p class="hint" style="margin:6px 0 0">Pick a case, then type over any label or number below to build your own icon array.</p>
+  </section>
+
+  <section>
+    <h2>Titles</h2>
+    <label><span class="lbl">Title</span><input type="text" id="title"></label>
+    <label><span class="lbl">Subtitle or source (optional)</span><input type="text" id="subtitle"></label>
+  </section>
+
+  <section>
+    <h2>Display</h2>
+    <label class="inline"><input type="radio" name="grid" value="100" checked> 100 people</label>
+    <label class="inline"><input type="radio" name="grid" value="1000"> 1,000 people</label>
+    <div class="row" style="margin-top:8px">
+      <label><span class="lbl">1,000-person shape</span>
+        <select id="shape"><option value="wide">40 wide × 25 tall</option><option value="tall">25 wide × 40 tall</option></select></label>
+      <label><span class="lbl">Icon</span>
+        <select id="icon"><option value="circle">Circles</option><option value="person">People</option></select></label>
+    </div>
+    <label class="inline"><input type="checkbox" id="groups" checked> Gaps every 5 (easier counting)</label>
+  </section>
+
+  <section>
+    <h2>Treatments</h2>
+    <div class="row">
+      <label><span class="lbl">Left arm</span><input type="text" id="armA"></label>
+      <label><span class="lbl">Right arm</span><input type="text" id="armB"></label>
+    </div>
+    <button id="swap" type="button">⇄ Swap left and right</button>
+  </section>
+
+  <section>
+    <h2>Outcome</h2>
+    <div class="row">
+      <label><span class="lbl">Outcome name</span><input type="text" id="outLabel"></label>
+      <label><span class="lbl">Its opposite</span><input type="text" id="oppLabel"></label>
+    </div>
+    <label class="inline"><input type="checkbox" id="desirable"> This outcome is a good thing</label>
+    <div style="margin-top:8px">
+      <span class="lbl">Count from the top-left (framing)</span>
+      <label class="inline"><input type="radio" name="frame" value="outcome" checked> <span id="frameOut">Outcome</span></label>
+      <label class="inline"><input type="radio" name="frame" value="opposite"> <span id="frameOpp">Opposite</span></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Outcome rates</h2>
+    <label><span class="lbl">Enter as</span>
+      <select id="mode">
+        <option value="pct">Percentages</option>
+        <option value="counts">Events and number of patients</option>
+        <option value="rel">Baseline risk + relative effect</option>
+      </select></label>
+
+    <div id="panel-pct">
+      <div class="row">
+        <label><span class="lbl" id="pctALbl">Left arm, %</span><input type="number" id="pctA" step="any" min="0" max="100"></label>
+        <label><span class="lbl" id="pctBLbl">Right arm, %</span><input type="number" id="pctB" step="any" min="0" max="100"></label>
+      </div>
+    </div>
+
+    <div id="panel-counts" class="hidden">
+      <div class="evrow"><span class="lbl" id="evALbl">Left arm</span><input type="number" id="evA" min="0" step="1"><span class="of">/</span><input type="number" id="nA" min="1" step="1"></div>
+      <div class="evrow"><span class="lbl" id="evBLbl">Right arm</span><input type="number" id="evB" min="0" step="1"><span class="of">/</span><input type="number" id="nB" min="1" step="1"></div>
+      <p class="hint">Events / patients in each arm.</p>
+    </div>
+
+    <div id="panel-rel" class="hidden">
+      <label><span class="lbl" id="baseLbl">Right arm (comparator) risk, %</span><input type="number" id="baseB" step="any" min="0" max="100"></label>
+      <div class="row">
+        <label><span class="lbl">Relative effect given as</span>
+          <select id="relType"><option value="rrr">Relative risk reduction, %</option><option value="rr">Relative risk (RR)</option></select></label>
+        <label><span class="lbl">Value</span><input type="number" id="relVal" step="any"></label>
+      </div>
+      <p class="hint">Left arm risk = comparator risk × RR. Try the same RRR at different baseline risks.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Highlight the difference</h2>
+    <select id="highlight">
+      <option value="better">In the better arm (extra good outcomes)</option>
+      <option value="worse">In the worse arm (extra bad outcomes)</option>
+      <option value="both">In both arms</option>
+      <option value="none">Don't highlight</option>
+    </select>
+  </section>
+
+  <section>
+    <h2>Side effects</h2>
+    <label class="inline"><input type="checkbox" id="seShow"> Show side effects as rings</label>
+    <div id="seFields">
+      <label style="margin-top:6px"><span class="lbl">Side-effect name</span><input type="text" id="seLabel"></label>
+      <div id="se-pct" class="row">
+        <label><span class="lbl" id="sePctALbl">Left arm, %</span><input type="number" id="sePctA" step="any" min="0" max="100"></label>
+        <label><span class="lbl" id="sePctBLbl">Right arm, %</span><input type="number" id="sePctB" step="any" min="0" max="100"></label>
+      </div>
+      <div id="se-counts" class="hidden">
+        <div class="evrow"><span class="lbl" id="seEvALbl">Left arm</span><input type="number" id="seEvA" min="0" step="1"><span class="of">/</span><input type="number" id="seNA" min="1" step="1"></div>
+        <div class="evrow"><span class="lbl" id="seEvBLbl">Right arm</span><input type="number" id="seEvB" min="0" step="1"><span class="of">/</span><input type="number" id="seNB" min="1" step="1"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Colors</h2>
+    <label><span class="lbl">Scheme</span>
+      <select id="preset">
+        <option value="blue">Blue shades (dark / white / light)</option>
+        <option value="stark">Stark: blue, white, yellow, red</option>
+        <option value="bw">Black and white (printing)</option>
+        <option value="custom">Custom</option>
+      </select></label>
+    <div class="colors">
+      <label><input type="color" id="cGood"> Good outcome</label>
+      <label><input type="color" id="cBad"> Bad outcome</label>
+      <label><input type="color" id="cExtraGood"> Extra good</label>
+      <label><input type="color" id="cExtraBad"> Extra bad</label>
+      <label><input type="color" id="cRing"> Side-effect ring</label>
+      <label><input type="color" id="cOutline"> Icon outline</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Output</h2>
+    <label class="inline"><input type="checkbox" id="showStats" checked> Show ARR / RRR / NNT under the arrays</label>
+    <div id="msg"></div>
+    <div class="buttons" style="margin-top:6px">
+      <button id="present" type="button" class="primary">Present full screen</button>
+      <button id="png" type="button">Download PNG</button>
+      <button id="print" type="button">Print / save PDF</button>
+      <button id="svgDl" type="button">Download SVG</button>
+    </div>
+  </section>
+</aside>
+
+<main><div id="figure"></div></main>
+<button id="exitPresent" type="button">Exit (Esc)</button>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const PRESETS = {
+  blue:  { good:'#1d4f91', bad:'#ffffff', extraGood:'#8cc4ff', extraBad:'#f2c200', ring:'#000000', outline:'#7a8494' },
+  stark: { good:'#0050e6', bad:'#ffffff', extraGood:'#ffd000', extraBad:'#d40000', ring:'#000000', outline:'#555555' },
+  bw:    { good:'#222222', bad:'#ffffff', extraGood:'#8f8f8f', extraBad:'#cfcfcf', ring:'#000000', outline:'#444444' }
+};
+const COLOR_IDS = { good:'cGood', bad:'cBad', extraGood:'cExtraGood', extraBad:'cExtraBad', ring:'cRing', outline:'cOutline' };
+
+const EXAMPLES = {
+  abx: {
+    title:'Antibiotic A vs Antibiotic B', subtitle:'Clinical cure, per patients treated',
+    grid:'100', armA:'Antibiotic A', armB:'Antibiotic B', outLabel:'Cured', oppLabel:'Not cured', desirable:true,
+    frame:'outcome', mode:'pct', pctA:97, pctB:85, evA:485, nA:500, evB:425, nB:500, baseB:85, relType:'rr', relVal:1.141,
+    seShow:true, seLabel:'Rash', sePctA:3, sePctB:6, seEvA:15, seNA:500, seEvB:30, seNB:500
+  },
+  blank: {
+    title:'Your title here', subtitle:'Subtitle or source (optional)',
+    grid:'100', armA:'Treatment A', armB:'Treatment B', outLabel:'Good outcome', oppLabel:'Bad outcome', desirable:true,
+    frame:'outcome', mode:'pct', pctA:65, pctB:55, evA:65, nA:100, evB:55, nB:100, baseB:55, relType:'rr', relVal:1.182,
+    seShow:false, seLabel:'Side effect', sePctA:5, sePctB:5, seEvA:5, seNA:100, seEvB:5, seNB:100
+  },
+  flu: {
+    title:'mRNA vs standard inactivated influenza vaccine', subtitle:'Influenza illness',
+    grid:'1000', armA:'mRNA vaccine', armB:'Standard vaccine', outLabel:'Influenza illness', oppLabel:'No influenza illness', desirable:false,
+    frame:'outcome', mode:'pct', pctA:2.0, pctB:2.8, evA:20, nA:1000, evB:28, nB:1000, baseB:2.8, relType:'rrr', relVal:28.6,
+    seShow:false, seLabel:'Side effect', sePctA:0, sePctB:0, seEvA:0, seNA:1000, seEvB:0, seNB:1000
+  }
+};
+
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const f = n => Math.round(n * 100) / 100;
+const num = id => { const v = $(id).value.trim(); return v === '' ? NaN : Number(v); };
+const fmtPct = x => { const v = x * 100; return (Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v) : +v.toFixed(1)) + '%'; };
+// decimals needed so two rates display consistently (e.g. 2.0% and 2.8%)
+const pctDigits = (...rs) => Math.max(...rs.map(r => { const v = r * 100; return Math.abs(v - Math.round(v)) < 1e-9 ? 0 : 1; }));
+const fmtPctD = (x, d) => (x * 100).toFixed(d) + '%';
+const fmtNum = x => Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : x.toFixed(1);
+const fmtN = N => N === 1000 ? '1,000' : String(N);
+const ceilSafe = x => Math.ceil(x - 1e-9);
+const _ctx = document.createElement('canvas').getContext('2d');
+const textW = (s, fs, bold) => { _ctx.font = `${bold ? '700 ' : ''}${fs}px Helvetica, Arial, sans-serif`; return _ctx.measureText(s).width; };
+const fmtNNT = x => Math.abs(x - Math.round(x)) < 0.05 ? String(Math.round(x)) : x.toFixed(1);
+
+/* ---------- read inputs ---------- */
+function rateFrom(mode, pctId, evId, nId, what, msgs) {
+  if (mode === 'counts') {
+    const e = num(evId), n = num(nId);
+    if (!(n > 0) || isNaN(e) || e < 0 || e > n) { msgs.push(`Check events / patients for ${what}.`); return null; }
+    return { r: e / n, src: `${e}/${n}` };
+  }
+  const p = num(pctId);
+  if (isNaN(p) || p < 0 || p > 100) { msgs.push(`Enter a percentage from 0 to 100 for ${what}.`); return null; }
+  return { r: p / 100, src: null };
+}
+
+function readState() {
+  const msgs = [];
+  const S = {
+    title: $('title').value.trim(), subtitle: $('subtitle').value.trim(),
+    grid: +document.querySelector('input[name=grid]:checked').value,
+    shape: $('shape').value, icon: $('icon').value, groups: $('groups').checked,
+    armA: $('armA').value.trim() || 'Left arm', armB: $('armB').value.trim() || 'Right arm',
+    out: $('outLabel').value.trim() || 'Outcome', opp: $('oppLabel').value.trim() || 'No outcome',
+    desirable: $('desirable').checked,
+    frame: document.querySelector('input[name=frame]:checked').value,
+    mode: $('mode').value, highlight: $('highlight').value,
+    seShow: $('seShow').checked, se: $('seLabel').value.trim() || 'Side effect',
+    showStats: $('showStats').checked, colors: {}
+  };
+  for (const k in COLOR_IDS) S.colors[k] = $(COLOR_IDS[k]).value;
+
+  let A, B;
+  if (S.mode === 'rel') {
+    const base = num('baseB'), v = num('relVal');
+    if (isNaN(base) || base < 0 || base > 100) msgs.push('Enter the comparator risk as 0–100%.');
+    else if (isNaN(v)) msgs.push('Enter the relative effect.');
+    else {
+      const rr = $('relType').value === 'rr' ? v : 1 - v / 100;
+      if (rr < 0) msgs.push('Relative effect gives a negative risk.');
+      else {
+        let rA = base / 100 * rr;
+        if (rA > 1) { msgs.push('Left-arm risk exceeds 100%; shown as 100%.'); rA = 1; }
+        A = { r: rA, src: `${fmtPct(base/100)} × RR ${+rr.toFixed(3)}` };
+        B = { r: base / 100, src: null };
+      }
+    }
+  } else {
+    A = rateFrom(S.mode, 'pctA', 'evA', 'nA', S.armA, msgs);
+    B = rateFrom(S.mode, 'pctB', 'evB', 'nB', S.armB, msgs);
+  }
+  S.A = A; S.B = B;
+
+  if (S.seShow) {
+    const seMode = S.mode === 'counts' ? 'counts' : 'pct';
+    S.seA = rateFrom(seMode, 'sePctA', 'seEvA', 'seNA', `${S.se} (${S.armA})`, msgs);
+    S.seB = rateFrom(seMode, 'sePctB', 'seEvB', 'seNB', `${S.se} (${S.armB})`, msgs);
+  }
+  S.ok = !!(A && B) && (!S.seShow || (S.seA && S.seB));
+  S.msgs = msgs;
+  return S;
+}
+
+/* ---------- drawing ---------- */
+function iconSVG(x, y, c, fill, S, ring) {
+  const ol = S.colors.outline, sw = f(c * 0.045);
+  let s;
+  if (S.icon === 'person') {
+    const hr = c * 0.13, hy = y - c * 0.2;
+    s = `<g fill="${fill}" stroke="${ol}" stroke-width="${sw}"><circle cx="${f(x)}" cy="${f(hy)}" r="${f(hr)}"/>` +
+        `<path d="M${f(x-c*.2)} ${f(y+c*.3)}V${f(y+c*.03)}Q${f(x-c*.2)} ${f(y-c*.05)} ${f(x-c*.11)} ${f(y-c*.05)}H${f(x+c*.11)}` +
+        `Q${f(x+c*.2)} ${f(y-c*.05)} ${f(x+c*.2)} ${f(y+c*.03)}V${f(y+c*.3)}Z"/></g>`;
+  } else {
+    s = `<circle cx="${f(x)}" cy="${f(y)}" r="${f(c*0.33)}" fill="${fill}" stroke="${ol}" stroke-width="${sw}"/>`;
+  }
+  if (ring) s += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(c*0.445)}" fill="none" stroke="${S.colors.ring}" stroke-width="${f(c*0.075)}"/>`;
+  return s;
+}
+
+function text(x, y, s, fs, opts = {}) {
+  const anchor = opts.anchor || 'middle';
+  return `<text x="${f(x)}" y="${f(y)}" font-size="${f(fs)}" text-anchor="${anchor}"` +
+    (opts.bold ? ' font-weight="700"' : '') + (opts.italic ? ' font-style="italic"' : '') +
+    ` fill="${opts.color || '#1d2330'}">${esc(s)}</text>`;
+}
+// shrink font so a line fits a width
+const fitFont = (s, fs, maxW, bold) => Math.min(fs, fs * maxW / Math.max(1, textW(s, fs, bold)));
+
+function build(S) {
+  const N = S.grid;
+  let cols, rows;
+  if (N === 100) { cols = 10; rows = 10; }
+  else if (S.shape === 'wide') { cols = 40; rows = 25; }
+  else { cols = 25; rows = 40; }
+  const c = N === 100 ? 40 : 16;
+  const g = S.groups ? (N === 100 ? 14 : 7) : 0;
+  const aw = cols * c + Math.floor((cols - 1) / 5) * g;
+  const ah = rows * c + Math.floor((rows - 1) / 5) * g;
+  const mid = N === 100 ? 90 : 56;
+  const M = 36;
+  const W = Math.max(2 * aw + mid + 2 * M, 1000);
+  const x0 = [(W - (2 * aw + mid)) / 2, (W - (2 * aw + mid)) / 2 + aw + mid];
+  const maxTextW = W - 2 * M;
+  const muted = '#5d6675';
+  const T = Math.max(1, W / 1150); // enlarge text for the wide 1,000-person layout
+
+  // Outcome logic
+  const outA = S.A.r, outB = S.B.r;
+  const countedIsOutcome = S.frame === 'outcome';
+  const countedLabel = countedIsOutcome ? S.out : S.opp;
+  const countedDesirable = countedIsOutcome === S.desirable;
+  const desLabel = S.desirable ? S.out : S.opp;
+  const undLabel = S.desirable ? S.opp : S.out;
+  const cnt = [countedIsOutcome ? outA : 1 - outA, countedIsOutcome ? outB : 1 - outB]; // exact counted rates
+  const k = cnt.map(r => Math.round(r * N));
+  const names = [S.armA, S.armB];
+
+  // rounded difference band
+  const lo = Math.min(k[0], k[1]), hi = Math.max(k[0], k[1]);
+  const highArm = k[0] > k[1] ? 0 : 1;                 // arm whose counted icons extend into the band
+  const bandBetter = countedDesirable ? highArm : 1 - highArm; // arm that is good in the band
+  const seK = S.seShow ? [Math.round(S.seA.r * N), Math.round(S.seB.r * N)] : [0, 0];
+
+  const parts = [];
+  let y = M;
+  if (S.title) { const fs = fitFont(S.title, 32 * T, maxTextW, true); y += fs; parts.push(text(W/2, y, S.title, fs, { bold: true })); y += 8 * T; }
+  if (S.subtitle) { const fs = fitFont(S.subtitle, 20 * T, maxTextW); y += fs; parts.push(text(W/2, y, S.subtitle, fs, { color: muted })); y += 6 * T; }
+  y += 26 * T;
+
+  // Arm headers
+  const headTop = y;
+  for (let a = 0; a < 2; a++) {
+    const cx = x0[a] + aw / 2;
+    const fs1 = fitFont(names[a], 26 * T, aw + mid - 10, true);
+    parts.push(text(cx, headTop + 24 * T, names[a], fs1, { bold: true }));
+    const line2 = `${k[a]} of ${fmtN(N)}: ${countedLabel}`;
+    parts.push(text(cx, headTop + 50 * T, line2, fitFont(line2, 19 * T, aw + mid - 10)));
+    const src = (a === 0 ? S.A : S.B).src;
+    const rawOut = a === 0 ? outA : outB;
+    const line3 = `${S.out}: ${fmtPctD(rawOut, pctDigits(outA, outB))}` + (src ? ` (${src})` : '');
+    parts.push(text(cx, headTop + 72 * T, line3, fitFont(line3, 15 * T, aw + mid - 10), { color: muted }));
+  }
+  y = headTop + 90 * T;
+
+  // Grids
+  const gridTop = y;
+  for (let a = 0; a < 2; a++) {
+    for (let i = 0; i < N; i++) {
+      const col = i % cols, row = Math.floor(i / cols);
+      const cx = x0[a] + col * c + Math.floor(col / 5) * g + c / 2;
+      const cy = gridTop + row * c + Math.floor(row / 5) * g + c / 2;
+      const counted = i < k[a];
+      const good = counted ? countedDesirable : !countedDesirable;
+      let fill = good ? S.colors.good : S.colors.bad;
+      if (i >= lo && i < hi) {
+        if (a === bandBetter && (S.highlight === 'better' || S.highlight === 'both')) fill = S.colors.extraGood;
+        if (a !== bandBetter && (S.highlight === 'worse' || S.highlight === 'both')) fill = S.colors.extraBad;
+      }
+      parts.push(iconSVG(cx, cy, c, fill, S, i < seK[a]));
+    }
+  }
+  y = gridTop + ah + 34 * T;
+
+  // Legend
+  const items = [
+    { fill: S.colors.good, label: desLabel },
+    { fill: S.colors.bad, label: undLabel }
+  ];
+  const band = hi - lo;
+  if (band > 0 && (S.highlight === 'better' || S.highlight === 'both'))
+    items.push({ fill: S.colors.extraGood, label: `Extra “${desLabel}” with ${names[bandBetter]}: ${band}` });
+  if (band > 0 && (S.highlight === 'worse' || S.highlight === 'both'))
+    items.push({ fill: S.colors.extraBad, label: `Extra “${undLabel}” with ${names[1 - bandBetter]}: ${band}` });
+  if (S.seShow) items.push({ fill: '#ffffff', ring: true, label: S.se });
+
+  const lfs = 18 * T, sw = 30 * T, itemGap = 34 * T;
+  const lines = [[]]; let lineW = 0;
+  for (const it of items) {
+    it.w = sw + 8 * T + textW(it.label, lfs);
+    if (lineW > 0 && lineW + itemGap + it.w > maxTextW) { lines.push([]); lineW = 0; }
+    lineW += (lineW > 0 ? itemGap : 0) + it.w;
+    lines[lines.length - 1].push(it);
+  }
+  for (const line of lines) {
+    const total = line.reduce((s, it) => s + it.w, 0) + itemGap * (line.length - 1);
+    let x = (W - total) / 2;
+    for (const it of line) {
+      parts.push(iconSVG(x + sw / 2, y, sw, it.fill, S, it.ring));
+      parts.push(text(x + sw + 8 * T, y + lfs * 0.36, it.label, lfs, { anchor: 'start' }));
+      x += it.w + itemGap;
+    }
+    y += 34 * T;
+  }
+
+  // Statistics (from unrounded rates)
+  if (S.showStats) {
+    y += 10 * T;
+    const sl = [];
+    const des = [S.desirable ? outA : 1 - outA, S.desirable ? outB : 1 - outB];
+    const ard = Math.abs(des[0] - des[1]);
+    if (ard < 1e-12) sl.push(`No difference in “${S.out}” between ${names[0]} and ${names[1]}.`);
+    else {
+      const b = des[0] > des[1] ? 0 : 1, w = 1 - b;
+      sl.push(`Absolute difference: ${fmtNum(ard * N)} per ${fmtN(N)} (${+(ard * 100).toFixed(2)} percentage points), favoring ${names[b]}`);
+      const hiR = Math.max(cnt[0], cnt[1]), loR = Math.min(cnt[0], cnt[1]);
+      const dd = pctDigits(hiR, loR), hiS = fmtPctD(hiR, dd), loS = fmtPctD(loR, dd);
+      if (countedDesirable) {
+        sl.push(loR > 0 ? `Relative difference, counting “${countedLabel}”: ${+((hiR - loR) / loR * 100).toFixed(1)}% relative increase (${loS} up to ${hiS})`
+                        : `Relative difference, counting “${countedLabel}”: undefined (${loS} up to ${hiS})`);
+      } else {
+        sl.push(`Relative difference, counting “${countedLabel}”: ${+((hiR - loR) / hiR * 100).toFixed(1)}% relative reduction (${hiS} down to ${loS})`);
+      }
+      const nnt = 1 / ard;
+      sl.push(`NNT ${fmtNNT(nnt)} → treat about ${ceilSafe(nnt)} with ${names[b]} instead of ${names[w]} for 1 more “${desLabel}”`);
+    }
+    if (S.seShow) {
+      const d = S.seA.r - S.seB.r;
+      if (Math.abs(d) < 1e-12) sl.push(`${S.se}: no difference between arms`);
+      else {
+        const more = d > 0 ? 0 : 1, less = 1 - more, nnh = 1 / Math.abs(d);
+        sl.push(`${S.se}: ${fmtNum(Math.abs(d) * N)} more per ${fmtN(N)} with ${names[more]}; NNH ${fmtNNT(nnh)} → 1 extra per ${ceilSafe(nnh)} treated`);
+      }
+    }
+    for (const s of sl) {
+      const fs = fitFont(s, 19 * T, maxTextW);
+      y += fs + 8 * T;
+      parts.push(text(W / 2, y, s, fs));
+    }
+  }
+
+  // Rounding footnote
+  const rounded = [];
+  const chk = (r, label) => { const ex = r * N; if (Math.abs(ex - Math.round(ex)) > 1e-6) rounded.push(`${label} ${+ex.toFixed(2)} → ${Math.round(ex)}`); };
+  chk(cnt[0], names[0]); chk(cnt[1], names[1]);
+  if (S.seShow) { chk(S.seA.r, `${S.se}, ${names[0]}`); chk(S.seB.r, `${S.se}, ${names[1]}`); }
+  if (rounded.length) {
+    const s = `Icons are rounded to whole people per ${fmtN(N)} (${rounded.join('; ')}). Statistics use unrounded rates.` +
+              (N === 100 ? ' Switch to 1,000 for finer detail.' : '');
+    const fs = fitFont(s, 14 * T, maxTextW);
+    y += fs + 18 * T;
+    parts.push(text(W / 2, y, s, fs, { color: muted, italic: true }));
+  }
+
+  const H = y + M;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(W)} ${f(H)}" width="100%" height="100%" ` +
+         `font-family="Helvetica, Arial, sans-serif"><rect width="${f(W)}" height="${f(H)}" fill="#ffffff"/>${parts.join('')}</svg>`;
+}
+
+/* ---------- UI wiring ---------- */
+function syncUI() {
+  const mode = $('mode').value;
+  $('panel-pct').classList.toggle('hidden', mode !== 'pct');
+  $('panel-counts').classList.toggle('hidden', mode !== 'counts');
+  $('panel-rel').classList.toggle('hidden', mode !== 'rel');
+  $('se-pct').classList.toggle('hidden', mode === 'counts');
+  $('se-counts').classList.toggle('hidden', mode !== 'counts');
+  $('seFields').classList.toggle('hidden', !$('seShow').checked);
+  $('shape').disabled = document.querySelector('input[name=grid]:checked').value !== '1000';
+  const a = $('armA').value || 'Left arm', b = $('armB').value || 'Right arm';
+  $('pctALbl').textContent = `${a}, %`; $('pctBLbl').textContent = `${b}, %`;
+  $('evALbl').textContent = a; $('evBLbl').textContent = b;
+  $('sePctALbl').textContent = `${a}, %`; $('sePctBLbl').textContent = `${b}, %`;
+  $('seEvALbl').textContent = a; $('seEvBLbl').textContent = b;
+  $('baseLbl').textContent = `${b} (comparator) risk, %`;
+  $('frameOut').textContent = $('outLabel').value || 'Outcome';
+  $('frameOpp').textContent = $('oppLabel').value || 'Opposite';
+}
+
+function render() {
+  syncUI();
+  const S = readState();
+  $('msg').textContent = S.msgs.join(' ');
+  if (!S.ok) return;
+  $('figure').innerHTML = build(S);
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name]; if (!p) return;
+  for (const k in COLOR_IDS) $(COLOR_IDS[k]).value = p[k];
+}
+
+function loadExample(key) {
+  const e = EXAMPLES[key]; if (!e) return;
+  for (const [k, v] of Object.entries(e)) {
+    if (k === 'grid') document.querySelector(`input[name=grid][value="${v}"]`).checked = true;
+    else if (k === 'frame') document.querySelector(`input[name=frame][value="${v}"]`).checked = true;
+    else if (typeof v === 'boolean') $(k).checked = v;
+    else $(k).value = v;
+  }
+}
+
+function swapArms() {
+  if ($('mode').value === 'rel') {
+    const S = readState(); if (!S.ok) return;
+    $('mode').value = 'pct';
+    $('pctA').value = +(S.A.r * 100).toFixed(3); $('pctB').value = +(S.B.r * 100).toFixed(3);
+  }
+  const pairs = [['armA','armB'],['pctA','pctB'],['evA','evB'],['nA','nB'],['sePctA','sePctB'],['seEvA','seEvB'],['seNA','seNB']];
+  for (const [x, y] of pairs) { const t = $(x).value; $(x).value = $(y).value; $(y).value = t; }
+  render();
+}
+
+function slug() {
+  return (($('title').value || 'icon-array').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'icon-array');
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+function svgString() {
+  const svg = document.querySelector('#figure svg'); if (!svg) return null;
+  const vb = svg.viewBox.baseVal;
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('width', vb.width); clone.setAttribute('height', vb.height);
+  return { str: new XMLSerializer().serializeToString(clone), w: vb.width, h: vb.height };
+}
+function downloadPNG() {
+  const s = svgString(); if (!s) return;
+  const scale = 2, img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas');
+    cv.width = s.w * scale; cv.height = s.h * scale;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    cv.toBlob(b => download(b, slug() + '.png'), 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.str);
+}
+function downloadSVG() {
+  const s = svgString(); if (!s) return;
+  download(new Blob([s.str], { type: 'image/svg+xml' }), slug() + '.svg');
+}
+function setPresent(on) {
+  document.body.classList.toggle('present', on);
+  if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+$('controls').addEventListener('input', e => {
+  if (e.target.id === 'example') return;
+  if (e.target.id === 'preset') applyPreset(e.target.value);
+  else if (Object.values(COLOR_IDS).includes(e.target.id)) $('preset').value = 'custom';
+  render();
+});
+$('controls').addEventListener('change', e => { if (e.target.id === 'example') { loadExample(e.target.value); render(); } });
+$('swap').addEventListener('click', swapArms);
+$('png').addEventListener('click', downloadPNG);
+$('svgDl').addEventListener('click', downloadSVG);
+$('print').addEventListener('click', () => window.print());
+$('present').addEventListener('click', () => setPresent(true));
+$('exitPresent').addEventListener('click', () => setPresent(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') setPresent(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('present'); });
+
+// Initial state
+applyPreset('blue');
+loadExample('abx');
+render();
+</script>
+</body>
+</html>
