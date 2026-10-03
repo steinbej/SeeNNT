@@ -22,7 +22,10 @@
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; min-width: 0; }
   input[type=text], input[type=number], select { width: 100%; padding: 5px 7px; border: 1px solid #c4c9d1; border-radius: 5px; font: inherit; background: #fff; }
-  input[type=number] { text-align: right; }
+  input[type=number] { text-align: right; padding-right: 4px; }
+  /* keep the up/down arrows visible at all times, with space between them and the number */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { opacity: 1; margin-left: 10px; height: 22px; cursor: pointer; }
   .lbl { font-size: 12px; color: var(--muted); display: block; margin-bottom: 2px; }
   .colors { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
   .colors label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; }
@@ -34,7 +37,7 @@
   .hidden { display: none !important; }
   #msg { color: #b00020; font-size: 13px; min-height: 0; margin: 4px 0; }
   .hint { font-size: 12px; color: var(--muted); margin: -3px 0 7px; }
-  .evrow { display: grid; grid-template-columns: 1fr 70px 14px 70px; gap: 5px; align-items: center; margin-bottom: 6px; }
+  .evrow { display: grid; grid-template-columns: 1fr 86px 12px 86px; gap: 5px; align-items: center; margin-bottom: 6px; }
   .evrow span.of { text-align: center; color: var(--muted); }
 
   /* Presentation mode */
@@ -191,6 +194,11 @@
   <section>
     <h2>Output</h2>
     <label class="inline"><input type="checkbox" id="showStats" checked> Show ARR / RRR / NNT under the arrays</label>
+    <label style="margin-top:8px"><span class="lbl">Rounding of NNT and NNH</span>
+      <select id="nntRound">
+        <option value="up" selected>Always round up (EBM convention: 8.3 → 9)</option>
+        <option value="std">Conventional rounding up and down (8.3 → 8, 8.5 → 9)</option>
+      </select></label>
     <div id="msg"></div>
     <div class="buttons" style="margin-top:6px">
       <button id="present" type="button" class="primary">Present full screen</button>
@@ -245,7 +253,8 @@ const pctDigits = (...rs) => Math.max(...rs.map(r => { const v = r * 100; return
 const fmtPctD = (x, d) => (x * 100).toFixed(d) + '%';
 const fmtNum = x => Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : x.toFixed(1);
 const fmtN = N => N === 1000 ? '1,000' : String(N);
-const ceilSafe = x => Math.ceil(x - 1e-9);
+const roundStd = x => Math.round(x + 1e-9); // conventional: .5 and up rounds up, below .5 rounds down
+const roundUp = x => Math.ceil(x - 1e-9);    // EBM convention: always round NNT/NNH up
 const _ctx = document.createElement('canvas').getContext('2d');
 const textW = (s, fs, bold) => { _ctx.font = `${bold ? '700 ' : ''}${fs}px Helvetica, Arial, sans-serif`; return _ctx.measureText(s).width; };
 const fmtNNT = x => Math.abs(x - Math.round(x)) < 0.05 ? String(Math.round(x)) : x.toFixed(1);
@@ -274,7 +283,7 @@ function readState() {
     frame: document.querySelector('input[name=frame]:checked').value,
     mode: $('mode').value, highlight: $('highlight').value,
     seShow: $('seShow').checked, se: $('seLabel').value.trim() || 'Side effect',
-    showStats: $('showStats').checked, colors: {}
+    showStats: $('showStats').checked, nntRound: $('nntRound').value, colors: {}
   };
   for (const k in COLOR_IDS) S.colors[k] = $(COLOR_IDS[k]).value;
 
@@ -446,6 +455,7 @@ function build(S) {
     const sl = [];
     const des = [S.desirable ? outA : 1 - outA, S.desirable ? outB : 1 - outB];
     const ard = Math.abs(des[0] - des[1]);
+    const rnd = S.nntRound === 'std' ? roundStd : roundUp;
     if (ard < 1e-12) sl.push(`No difference in “${S.out}” between ${names[0]} and ${names[1]}.`);
     else {
       const b = des[0] > des[1] ? 0 : 1, w = 1 - b;
@@ -459,14 +469,14 @@ function build(S) {
         sl.push(`Relative difference, counting “${countedLabel}”: ${+((hiR - loR) / hiR * 100).toFixed(1)}% relative reduction (${hiS} down to ${loS})`);
       }
       const nnt = 1 / ard;
-      sl.push(`NNT ${fmtNNT(nnt)} → treat about ${ceilSafe(nnt)} with ${names[b]} instead of ${names[w]} for 1 more “${desLabel}”`);
+      sl.push(`NNT ${fmtNNT(nnt)} → treat about ${rnd(nnt)} with ${names[b]} instead of ${names[w]} for 1 more “${desLabel}”`);
     }
     if (S.seShow) {
       const d = S.seA.r - S.seB.r;
       if (Math.abs(d) < 1e-12) sl.push(`${S.se}: no difference between arms`);
       else {
         const more = d > 0 ? 0 : 1, less = 1 - more, nnh = 1 / Math.abs(d);
-        sl.push(`${S.se}: ${fmtNum(Math.abs(d) * N)} more per ${fmtN(N)} with ${names[more]}; NNH ${fmtNNT(nnh)} → 1 extra per ${ceilSafe(nnh)} treated`);
+        sl.push(`${S.se}: ${fmtNum(Math.abs(d) * N)} more per ${fmtN(N)} with ${names[more]}; NNH ${fmtNNT(nnh)} → 1 extra per ${rnd(nnh)} treated`);
       }
     }
     for (const s of sl) {
