@@ -9,13 +9,15 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body { font: 14px/1.4 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); display: flex; flex-direction: column; height: 100vh; }
-  aside { width: 360px; flex: none; min-height: 0; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 14px 16px 48px; }
+  aside { width: 360px; flex: none; transition: width .15s; min-height: 0; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 14px 16px 48px; }
   main { flex: 1; min-width: 0; min-height: 0; padding: 18px; display: flex; }
   .app { flex: 1; display: flex; min-height: 0; }
 
   /* Top bar with segmented control */
   header.top { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
-  header.top .brand { min-width: 0; }
+  header.top .brand { min-width: 0; display: flex; align-items: center; gap: 14px; }
+  #widen { font-size: 12.5px; padding: 5px 9px; white-space: nowrap; }
+  aside.wide { width: 720px; }
   header.top .brand b { font-size: 19px; color: var(--accent); display: block; line-height: 1.1; }
   header.top .brand span { font-size: 12px; color: var(--muted); }
   .segmented { display: inline-flex; background: #e3e6eb; border-radius: 9px; padding: 3px; gap: 2px; }
@@ -29,7 +31,9 @@
   body:not(.tab-multi) .only-multi { display: none !important; }
   /* Multiple-outcome rows */
   .mhead, .mrow { display: grid; grid-template-columns: 1fr 70px 32px 26px; gap: 5px; align-items: center; margin-bottom: 5px; }
-  .mhead.two, .mrow.two { grid-template-columns: 1fr 64px 64px 32px 26px; }
+  .mhead.two, .mrow.two { grid-template-columns: 30px 1fr 64px 64px 32px 26px; }
+  .mrow input[type=checkbox] { width: 18px; height: 18px; margin: 0 auto; display: block; }
+  .mhead.two span:first-child { text-align: center; }
   .mhead span { font-size: 11.5px; color: var(--muted); }
   .mrow input[type=number] { padding-left: 4px; }
   .mrow input[type=number]::-webkit-inner-spin-button { margin-left: 3px; }
@@ -87,7 +91,8 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand"><b>SeeNNT</b><span>Icon arrays for teaching absolute risk and NNT</span></div>
+  <div class="brand"><div><b>SeeNNT</b><span>Icon arrays for teaching absolute risk and NNT</span></div>
+    <button id="widen" type="button" title="Make the left panel twice as wide">⇔ Wider panel</button></div>
   <div class="segmented" role="tablist">
     <button type="button" role="tab" data-tab="see" aria-selected="true">See an NNT</button>
     <button type="button" role="tab" data-tab="multi" aria-selected="false">Multiple Outcomes Icon Array</button>
@@ -114,8 +119,8 @@
     <label class="inline"><input type="radio" name="grid" value="100" checked> 100 people</label>
     <label class="inline"><input type="radio" name="grid" value="1000"> 1,000 people</label>
     <div class="row" style="margin-top:8px">
-      <label><span class="lbl">1,000-person shape</span>
-        <select id="shape"><option value="wide">40 wide × 25 tall</option><option value="tall">25 wide × 40 tall</option></select></label>
+      <label><span class="lbl" title="Automatic: 40 wide × 25 tall for one array, 25 wide × 40 tall for two arrays side by side">1,000-person shape</span>
+        <select id="shape"><option value="auto">Automatic</option><option value="wide">40 wide × 25 tall</option><option value="tall">25 wide × 40 tall</option></select></label>
       <label><span class="lbl">Icon</span>
         <select id="icon"><option value="circle">Circles</option><option value="person">People</option></select></label>
     </div>
@@ -124,8 +129,9 @@
 
   <section>
     <h2 id="treatH2">Treatments</h2>
-    <label class="only-multi"><span class="lbl">Number of icon arrays</span>
-      <select id="mArrays"><option value="1">One icon array</option><option value="2">Two icon arrays, side by side</option></select></label>
+    <div class="only-multi" style="margin-bottom:8px"><span class="lbl">Number of icon arrays</span>
+      <label class="inline"><input type="radio" name="mArr" value="1" checked> One icon array</label>
+      <label class="inline"><input type="radio" name="mArr" value="2"> Two, side by side</label></div>
     <div class="row">
       <label><span class="lbl" id="armALbl">Left arm</span><input type="text" id="armA"></label>
       <label id="armBWrap"><span class="lbl">Right arm</span><input type="text" id="armB"></label>
@@ -141,7 +147,7 @@
         <option value="list">All rows in list order (row 1 first)</option>
         <option value="firstLast">Rows 2 onward first, then row 1</option>
       </select></label>
-    <p class="hint">The numbers in each array must add up to the number of people in the grid.</p>
+    <p class="hint">The numbers in each array must add up to the number of people in the grid. With two arrays, tick “NNT” on any outcome to show its NNT between the arrays.</p>
     <div id="mHead" class="mhead"></div>
     <div id="mRows"></div>
     <div id="mTotal"></div>
@@ -251,12 +257,12 @@
     <h2>Output</h2>
     <div class="only-nnt">
     <label class="inline"><input type="checkbox" id="showStats" checked> Show ARR / RRR / NNT under the arrays</label>
+    </div>
     <label style="margin-top:8px"><span class="lbl">Rounding of NNT and NNH</span>
       <select id="nntRound">
         <option value="up" selected>Always round up (EBM convention: 8.3 → 9)</option>
         <option value="std">Conventional rounding up and down (8.3 → 8, 8.5 → 9)</option>
       </select></label>
-    </div>
     <div id="msg"></div>
     <div class="buttons" style="margin-top:6px">
       <button id="present" type="button" class="primary">Present full screen</button>
@@ -312,9 +318,21 @@ const EXAMPLES = {
     frame:'outcome', nntVal:10, nntBase:50, highlight:'better',
     seShow:false, seLabel:'Side effect', sePctA:5, sePctB:5
   },
+  lungCT: {
+    title:'Low Dose CT Lung Cancer Screening', subtitle:'Source: add the trial citation here',
+    grid:'1000', shape:'auto', mArr:'2', mRemainder:true, mOrder:'list', armA:'Low-dose CT screening', armB:'No screening',
+    rows:[
+      { label:'No impact', a:592, b:965, color:'#ffffff' },
+      { label:'Abnormal CT scan requiring further tests, nothing more', a:340, b:0, color:'#0050e6' },
+      { label:'Abn CT: Surgical biopsy', a:25, b:0, color:'#ffd000' },
+      { label:'Abn CT: Major complication (e.g. pneumothorax)', a:3, b:0, color:'#d40000' },
+      { label:'Lung cancers found, non-fatal', a:22, b:14, color:'#2e9e44' },
+      { label:'Lung cancers found, fatal', a:18, b:21, color:'#000000', nnt:true }
+    ]
+  },
   multi6: {
     title:'Outcomes for 100 people', subtitle:'Type over the labels and numbers to make your own',
-    grid:'100', mArrays:'1', mRemainder:true, mOrder:'list', armA:'', armB:'',
+    grid:'100', mArr:'1', mRemainder:true, mOrder:'list', armA:'', armB:'',
     rows:[
       { label:'No impact', a:85, b:85, color:'#ffffff' },
       { label:'Outcome A', a:5, b:5, color:'#0050e6' },
@@ -326,12 +344,12 @@ const EXAMPLES = {
   },
   multiTwo: {
     title:'Group 1 vs Group 2', subtitle:'Type over the labels and numbers to make your own',
-    grid:'100', mArrays:'2', mRemainder:true, mOrder:'list', armA:'Group 1', armB:'Group 2',
+    grid:'100', mArr:'2', mRemainder:true, mOrder:'list', armA:'Group 1', armB:'Group 2',
     rows:[
       { label:'No impact', a:85, b:88, color:'#ffffff' },
       { label:'Outcome A', a:5, b:2, color:'#0050e6' },
       { label:'Outcome B', a:4, b:4, color:'#ffd000' },
-      { label:'Outcome C', a:3, b:5, color:'#d40000' },
+      { label:'Outcome C', a:3, b:5, color:'#d40000', nnt:true },
       { label:'Outcome D', a:2, b:1, color:'#2e9e44' },
       { label:'Outcome E', a:1, b:0, color:'#000000' }
     ]
@@ -347,12 +365,14 @@ const EXAMPLES = {
 const TAB_EXAMPLES = {
   see:   [['abx','Antibiotic cure: 97% vs 85%'], ['flu','Influenza vaccine: illness 2.0% vs 2.8%'], ['blank','Blank case from scratch']],
   enter: [['nnt6','NNT 6, baseline good outcome 34%'], ['nnt50','Prevention: NNT 50, baseline event rate 10%'], ['nntBlank','Blank case from scratch']],
-  multi: [['multi6', 'Six outcomes, one icon array'], ['multiTwo', 'Six outcomes, two icon arrays']]
+  multi: [['lungCT', 'Low-dose CT lung cancer screening'], ['multi6', 'Six outcomes, one icon array'], ['multiTwo', 'Six outcomes, two icon arrays']]
 };
 let currentTab = 'see';
 const savedTabs = {};
 
 /* ---------- helpers ---------- */
+// Automatic shape: one array is laid out wide, two side-by-side arrays are laid out tall
+const resolveShape = (v, two) => v === 'auto' ? (two ? 'tall' : 'wide') : v;
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const f = n => Math.round(n * 100) / 100;
 const num = id => { const v = $(id).value.trim(); return v === '' ? NaN : Number(v); };
@@ -385,7 +405,7 @@ function readState() {
   const S = {
     title: $('title').value.trim(), subtitle: $('subtitle').value.trim(),
     grid: +document.querySelector('input[name=grid]:checked').value,
-    shape: $('shape').value, icon: $('icon').value, groups: $('groups').checked,
+    shape: resolveShape($('shape').value, true), icon: $('icon').value, groups: $('groups').checked,
     armA: $('armA').value.trim() || 'Left arm', armB: $('armB').value.trim() || 'Right arm',
     out: $('outLabel').value.trim() || 'Outcome', opp: $('oppLabel').value.trim() || 'No outcome',
     desirable: $('desirable').checked,
@@ -628,25 +648,32 @@ function build(S) {
 }
 
 /* ---------- Multiple outcomes ---------- */
+const mTwo = () => { const el = document.querySelector('input[name=mArr]:checked'); return !!el && el.value === '2'; };
 let multiRows = [];
 const EXTRA_COLORS = ['#8cc4ff', '#ff8c00', '#7b3fa0', '#8f8f8f', '#00a3a3', '#a0522d'];
 
 function buildRows() {
-  const two = $('mArrays').value === '2', rem = $('mRemainder').checked;
+  const two = mTwo(), rem = $('mRemainder').checked;
   const head = $('mHead'), box = $('mRows');
   head.className = 'mhead' + (two ? ' two' : '');
-  head.innerHTML = '<span>Outcome</span>' + (two ? '<span>Left</span><span>Right</span>' : '<span>People</span>') + '<span>Color</span><span></span>';
+  head.innerHTML = (two ? '<span title="Show this outcome’s NNT between the arrays">NNT</span>' : '') + '<span>Outcome</span>' + (two ? '<span>Left</span><span>Right</span>' : '<span>People</span>') + '<span>Color</span><span></span>';
   box.innerHTML = '';
   multiRows.forEach((r, i) => {
     if (r.b === undefined) r.b = r.a;
     const div = document.createElement('div');
     div.className = 'mrow' + (two ? ' two' : '');
-    div.innerHTML = '<input type="text" data-k="label" aria-label="Outcome name">' +
+    div.innerHTML = (two ? '<input type="checkbox" data-k="nnt" title="Show this outcome’s NNT between the arrays" aria-label="Show NNT for this outcome">' : '') +
+      '<input type="text" data-k="label" aria-label="Outcome name">' +
       '<input type="number" data-k="a" min="0" step="1" aria-label="Number of people">' +
       (two ? '<input type="number" data-k="b" min="0" step="1" aria-label="Number of people, right array">' : '') +
       '<input type="color" data-k="color" aria-label="Color">' +
       '<button type="button" class="mdel" title="Remove this outcome" aria-label="Remove this outcome">×</button>';
     div.querySelectorAll('input').forEach(el => {
+      if (el.type === 'checkbox') {
+        el.checked = !!r.nnt;
+        el.addEventListener('input', () => { r.nnt = el.checked; });
+        return;
+      }
       el.value = r[el.dataset.k];
       if (rem && i === 0 && (el.dataset.k === 'a' || el.dataset.k === 'b')) { el.readOnly = true; el.title = 'Calculated automatically from the other outcomes'; }
       el.addEventListener('input', () => { r[el.dataset.k] = el.value; });
@@ -668,7 +695,7 @@ function addRow() {
 function readMulti() {
   const msgs = [];
   const N = +document.querySelector('input[name=grid]:checked').value;
-  const two = $('mArrays').value === '2', rem = $('mRemainder').checked;
+  const two = mTwo(), rem = $('mRemainder').checked;
   const keys = two ? ['a', 'b'] : ['a'];
   const counts = [], unassigned = [];
   const tip = N === 100 ? 'Lower some numbers or switch to 1,000 people.' : 'Lower some numbers.';
@@ -692,8 +719,8 @@ function readMulti() {
     msgs, ok: msgs.length === 0, N, two, rem, counts, unassigned,
     names: [$('armA').value.trim(), $('armB').value.trim()],
     title: $('title').value.trim(), subtitle: $('subtitle').value.trim(),
-    shape: $('shape').value, icon: $('icon').value, groups: $('groups').checked,
-    outline: $('cOutline').value, order: $('mOrder').value
+    shape: resolveShape($('shape').value, two), icon: $('icon').value, groups: $('groups').checked,
+    outline: $('cOutline').value, order: $('mOrder').value, nntRound: $('nntRound').value
   };
 }
 
@@ -766,7 +793,30 @@ function buildMulti(M) {
   const labelW = M.two ? colW - 2 * cntW - sw - 8 * T : colW - sw - cntW - 8 * T;
   items.forEach(it => { it.lines = wrapText(it.label, lfs, labelW); it.h = Math.max(it.lines.length * lh, 30 * T) + 12 * T; });
   const LH = items.reduce((s, it) => s + it.h, 0);
-  let ly = gridTop + Math.max(0, (G.ah - LH) / 2);
+
+  // NNT block (two arrays only), drawn under the legend in the middle column
+  const nntItems = [];
+  if (M.two) {
+    const rnd = M.nntRound === 'std' ? roundStd : roundUp;
+    const armName = i => M.names[i] || (i ? 'right group' : 'left group');
+    order.forEach(ri => {
+      const r = multiRows[ri]; if (!r.nnt) return;
+      const a = M.counts[0][ri], b = M.counts[1][ri], d = Math.abs(a - b);
+      const label = r.label || `Outcome ${ri + 1}`;
+      let l2, l3;
+      if (d === 0) { l2 = `${a} vs ${b} per ${fmtN(N)}`; l3 = 'No difference, so no NNT'; }
+      else {
+        const lo = a < b ? 0 : 1, nnt = N / d;
+        l2 = `${a} vs ${b} per ${fmtN(N)}: ${d} fewer with ${armName(lo)}`;
+        l3 = `NNT ${fmtNNT(nnt)} → 1 fewer per ${rnd(nnt).toLocaleString('en-US')} people`;
+      }
+      nntItems.push({ color: r.color, l1: wrapText(label, 18 * T, colW - 30 * T, true), l2: wrapText(l2, 16 * T, colW), l3: wrapText(l3, 18 * T, colW, true) });
+    });
+  }
+  const nlh = 22 * T;
+  nntItems.forEach(n => { n.h = (n.l1.length + n.l2.length + n.l3.length) * nlh + 14 * T; });
+  const NH = nntItems.length ? 44 * T + nntItems.reduce((s, n) => s + n.h, 0) : 0;
+  let ly = gridTop + Math.max(0, (G.ah - LH - NH) / 2);
   for (const it of items) {
     const yc = ly + it.h / 2;
     const swX = M.two ? colX + cntW + sw / 2 : colX + sw / 2;
@@ -780,6 +830,19 @@ function buildMulti(M) {
       parts.push(text(colX + colW, yc + lfs * 0.36, String(it.counts[0]), lfs * 1.1, { anchor: 'end', bold: true }));
     }
     ly += it.h;
+  }
+  if (nntItems.length) {
+    ly += 14 * T;
+    parts.push(`<line x1="${f(colX)}" y1="${f(ly)}" x2="${f(colX + colW)}" y2="${f(ly)}" stroke="#c4c9d1" stroke-width="${f(1.5 * T)}"/>`);
+    ly += 30 * T;
+    for (const n of nntItems) {
+      let by = ly;
+      parts.push(iconSVG(colX + 11 * T, by - 6 * T, 22 * T, n.color, SI, false));
+      n.l1.forEach(ln => { parts.push(text(colX + 28 * T, by, ln, 18 * T, { anchor: 'start', bold: true })); by += nlh; });
+      n.l2.forEach(ln => { parts.push(text(colX, by, ln, 16 * T, { anchor: 'start', color: muted })); by += nlh; });
+      n.l3.forEach(ln => { parts.push(text(colX, by, ln, 18 * T, { anchor: 'start', bold: true, color: '#1d4f91' })); by += nlh; });
+      ly += n.h;
+    }
   }
 
   y = Math.max(gridTop + G.ah, ly) + 30 * T;
@@ -830,7 +893,7 @@ function syncUI() {
   $('seEvALbl').textContent = a; $('seEvBLbl').textContent = b;
   $('baseLbl').textContent = `${b} (comparator) risk, %`;
   $('frameOut').textContent = $('outLabel').value || 'Outcome';
-  const multi = currentTab === 'multi', twoArr = $('mArrays').value === '2';
+  const multi = currentTab === 'multi', twoArr = mTwo();
   $('treatH2').textContent = multi ? 'Icon arrays' : 'Treatments';
   $('armALbl').textContent = multi && !twoArr ? 'Label above the array (optional)' : (multi ? 'Left array' : 'Left arm');
   $('armBWrap').querySelector('.lbl').textContent = multi ? 'Right array' : 'Right arm';
@@ -866,9 +929,10 @@ function applyPreset(name) {
 
 function loadExample(key) {
   const e = EXAMPLES[key]; if (!e) return;
+  $('shape').value = 'auto';
   for (const [k, v] of Object.entries(e)) {
-    if (k === 'grid') document.querySelector(`input[name=grid][value="${v}"]`).checked = true;
-    else if (k === 'frame') document.querySelector(`input[name=frame][value="${v}"]`).checked = true;
+    const radio = document.querySelector(`input[type=radio][name="${k}"][value="${v}"]`);
+    if (radio) radio.checked = true;
     else if (k === 'rows') continue;
     else if (!$(k)) continue;
     else if (typeof v === 'boolean') $(k).checked = v;
@@ -966,7 +1030,7 @@ function setPresent(on) {
 
 $('controls').addEventListener('input', e => {
   if (e.target.id === 'example') return;
-  if (e.target.id === 'mArrays' || e.target.id === 'mRemainder') buildRows();
+  if (e.target.name === 'mArr' || e.target.id === 'mRemainder') buildRows();
   if (e.target.id === 'preset') applyPreset(e.target.value);
   else if (Object.values(COLOR_IDS).includes(e.target.id)) $('preset').value = 'custom';
   render();
@@ -974,6 +1038,14 @@ $('controls').addEventListener('input', e => {
 $('controls').addEventListener('change', e => { if (e.target.id === 'example') { loadExample(e.target.value); render(); } });
 $('swap').addEventListener('click', swapArms);
 $('mAdd').addEventListener('click', addRow);
+function setWide(on) {
+  $('controls').classList.toggle('wide', on);
+  $('widen').textContent = on ? '⇔ Narrower panel' : '⇔ Wider panel';
+  $('widen').title = on ? 'Return the left panel to its normal width' : 'Make the left panel twice as wide';
+  try { localStorage.setItem('seennt-wide', on ? '1' : '0'); } catch (e) {}
+}
+$('widen').addEventListener('click', () => setWide(!$('controls').classList.contains('wide')));
+try { if (localStorage.getItem('seennt-wide') === '1') setWide(true); } catch (e) {}
 document.querySelectorAll('.segmented button').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 $('png').addEventListener('click', downloadPNG);
 $('svgDl').addEventListener('click', downloadSVG);
