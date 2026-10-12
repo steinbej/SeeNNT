@@ -30,8 +30,30 @@
   body.tab-multi .only-nnt { display: none !important; }
   body:not(.tab-multi) .only-multi { display: none !important; }
   /* Multiple-outcome rows */
-  .mhead, .mrow { display: grid; grid-template-columns: 1fr 70px 32px 26px; gap: 5px; align-items: center; margin-bottom: 5px; }
-  .mhead.two, .mrow.two { grid-template-columns: 30px 1fr 64px 64px 32px 26px; }
+  .mhead, .mrow { display: grid; grid-template-columns: minmax(0,1fr) 70px 32px 26px; gap: 5px; align-items: center; margin-bottom: 5px; }
+  .mhead.two, .mrow.two { grid-template-columns: 30px minmax(0,1fr) 64px 64px 32px 26px; }
+  .mhead.faces, .mrow.faces { grid-template-columns: minmax(0,1fr) 66px 30px 44px 24px; }
+  .mhead.two.faces, .mrow.two.faces { grid-template-columns: 24px minmax(0,1fr) 58px 58px 30px 44px 24px; gap: 4px; }
+  .mrow > * { min-width: 0; }
+  .mrow input[type=text], .mrow input[type=number] { width: 100%; }
+  .mhead span { white-space: nowrap; overflow: hidden; }
+  /* face picker: plain line-drawn faces, no emoji */
+  .fp { position: relative; display: inline-block; }
+  .fp-btn { display: inline-flex; align-items: center; gap: 4px; padding: 2px 5px; height: 28px; background: #fff; border: 1px solid #c4c9d1; border-radius: 5px; }
+  .fp-btn::after { content: "▾"; font-size: 10px; color: var(--muted); }
+  .mrow .fp, .mrow .fp-btn { width: 100%; justify-content: center; }
+  .fp svg { width: 20px; height: 20px; flex: none; color: var(--ink); }
+  .fp-menu { position: absolute; z-index: 20; top: 100%; left: 0; margin-top: 2px; background: #fff; border: 1px solid #c4c9d1; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.15); padding: 3px; min-width: 130px; }
+  .mrow .fp-menu { left: auto; right: 0; }
+  .fp-menu button { display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none; padding: 5px 8px; border-radius: 4px; text-align: left; font-size: 13px; }
+  .fp-menu button:hover, .fp-menu button[aria-selected="true"] { background: #eef2f8; }
+  h2.withchk { display: flex; justify-content: space-between; align-items: center; }
+  h2.withchk label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--ink); margin: 0; display: inline-flex; gap: 5px; align-items: center; }
+  .colors.faces { grid-template-columns: 1fr; }
+  .colors .fp-btn { min-width: 118px; justify-content: flex-start; }
+  .colors .fp-btn::after { margin-left: auto; }
+  .feedback p { margin: 0 0 4px; }
+  .feedback a { color: var(--accent); }
   .mrow input[type=checkbox] { width: 18px; height: 18px; margin: 0 auto; display: block; }
   .mhead.two span:first-child { text-align: center; }
   .mhead span { font-size: 11.5px; color: var(--muted); }
@@ -140,7 +162,7 @@
   </section>
 
   <section class="only-multi">
-    <h2>Outcomes</h2>
+    <h2 class="withchk">Outcomes <label><input type="checkbox" id="mFaces"> Add smileys</label></h2>
     <label class="inline"><input type="checkbox" id="mRemainder" checked> First outcome takes up the remainder</label>
     <label style="margin-top:6px"><span class="lbl">Fill icons from the top-left with</span>
       <select id="mOrder">
@@ -235,7 +257,7 @@
   </section>
 
   <section class="only-nnt">
-    <h2>Colors</h2>
+    <h2 class="withchk">Colors <label><input type="checkbox" id="faceOn"> Add smileys</label></h2>
     <label><span class="lbl">Scheme</span>
       <select id="preset">
         <option value="blue">Blue shades (dark / white / light)</option>
@@ -244,10 +266,10 @@
         <option value="custom">Custom</option>
       </select></label>
     <div class="colors">
-      <label><input type="color" id="cGood"> Good outcome</label>
-      <label><input type="color" id="cBad"> Bad outcome</label>
-      <label><input type="color" id="cExtraGood"> Extra good</label>
-      <label><input type="color" id="cExtraBad"> Extra bad</label>
+      <label><input type="color" id="cGood"><input type="hidden" id="fGood"><span class="facesel fpslot" data-for="fGood"></span> Good outcome</label>
+      <label><input type="color" id="cBad"><input type="hidden" id="fBad"><span class="facesel fpslot" data-for="fBad"></span> Bad outcome</label>
+      <label><input type="color" id="cExtraGood"><input type="hidden" id="fExtraGood"><span class="facesel fpslot" data-for="fExtraGood"></span> Extra good</label>
+      <label><input type="color" id="cExtraBad"><input type="hidden" id="fExtraBad"><span class="facesel fpslot" data-for="fExtraBad"></span> Extra bad</label>
       <label><input type="color" id="cRing"> Side-effect ring</label>
       <label><input type="color" id="cOutline"> Icon outline</label>
     </div>
@@ -270,6 +292,12 @@
       <button id="print" type="button">Print / save PDF</button>
       <button id="svgDl" type="button">Download SVG</button>
     </div>
+  </section>
+
+  <section class="feedback">
+    <h2>Feedback</h2>
+    <p>Joshua Steinberg MD</p>
+    <p><a href="mailto:jds.pocapps@gmail.com?subject=SeeNNT%20feedback">jds.pocapps@gmail.com</a></p>
   </section>
 </aside>
 
@@ -415,6 +443,7 @@ function readState() {
     showStats: $('showStats').checked, nntRound: $('nntRound').value, colors: {}
   };
   for (const k in COLOR_IDS) S.colors[k] = $(COLOR_IDS[k]).value;
+  S.faces = $('faceOn').checked ? { good: $('fGood').value, bad: $('fBad').value, extraGood: $('fExtraGood').value, extraBad: $('fExtraBad').value } : {};
 
   let A, B;
   if (S.mode === 'nnt') {
@@ -462,7 +491,62 @@ function readState() {
 }
 
 /* ---------- drawing ---------- */
-function iconSVG(x, y, c, fill, S, ring) {
+function faceInk(hex) {
+  const h = String(hex).replace('#', '');
+  if (h.length < 6) return '#1d2330';
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16) / 255);
+  return (0.299 * r + 0.587 * g + 0.114 * b) < 0.55 ? '#ffffff' : '#1d2330';
+}
+function faceSVG(x, y, r, face, fill) {
+  if (!face || face === 'none') return '';
+  const ink = faceInk(fill), sw = f(r * 0.13);
+  let s = `<g stroke="${ink}" stroke-width="${sw}" stroke-linecap="round" fill="none">` +
+    `<circle cx="${f(x - r * 0.34)}" cy="${f(y - r * 0.28)}" r="${f(r * 0.06)}" fill="${ink}"/>` +
+    `<circle cx="${f(x + r * 0.34)}" cy="${f(y - r * 0.28)}" r="${f(r * 0.06)}" fill="${ink}"/>`;
+  if (face === 'smile') s += `<path d="M${f(x - r * 0.45)} ${f(y + r * 0.15)}Q${f(x)} ${f(y + r * 0.7)} ${f(x + r * 0.45)} ${f(y + r * 0.15)}"/>`;
+  else if (face === 'frown') s += `<path d="M${f(x - r * 0.42)} ${f(y + r * 0.52)}Q${f(x)} ${f(y + r * 0.05)} ${f(x + r * 0.42)} ${f(y + r * 0.52)}"/>`;
+  else s += `<path d="M${f(x - r * 0.4)} ${f(y + r * 0.34)}H${f(x + r * 0.4)}"/>`;
+  return s + '</g>';
+}
+const FACES = [['smile', 'Smiley'], ['neutral', 'Indifferent'], ['frown', 'Frowny'], ['none', 'No face']];
+function faceIcon(face) {
+  if (face === 'none') return '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10H15" stroke="#9aa1ad" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const mouth = face === 'smile' ? 'M5 11.2Q10 16.6 15 11.2' : face === 'frown' ? 'M5.6 15.2Q10 10.4 14.4 15.2' : 'M6 13.4H14';
+  return '<svg viewBox="0 0 20 20" aria-hidden="true"><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none">' +
+    '<circle cx="6.6" cy="6.8" r="0.9" fill="currentColor"/><circle cx="13.4" cy="6.8" r="0.9" fill="currentColor"/>' +
+    `<path d="${mouth}"/></g></svg>`;
+}
+// A small drop-down that shows plain line-drawn faces. onPick(value) is called when the user chooses.
+function makeFacePicker(value, onPick, withLabels) {
+  const wrap = document.createElement('div'); wrap.className = 'fp';
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fp-btn';
+  btn.setAttribute('aria-haspopup', 'listbox'); btn.title = 'Face shown inside these icons';
+  const menu = document.createElement('div'); menu.className = 'fp-menu hidden'; menu.setAttribute('role', 'listbox');
+  const show = v => {
+    const lbl = (FACES.find(x => x[0] === v) || FACES[1])[1];
+    btn.innerHTML = faceIcon(v) + (withLabels ? `<span>${lbl}</span>` : '');
+    btn.setAttribute('aria-label', 'Face: ' + lbl);
+    menu.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.v === v)));
+  };
+  FACES.forEach(([v, lbl]) => {
+    const o = document.createElement('button'); o.type = 'button'; o.dataset.v = v; o.setAttribute('role', 'option');
+    o.innerHTML = faceIcon(v) + `<span>${lbl}</span>`;
+    o.addEventListener('click', e => { e.stopPropagation(); menu.classList.add('hidden'); show(v); onPick(v); });
+    menu.appendChild(o);
+  });
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = menu.classList.contains('hidden');
+    document.querySelectorAll('.fp-menu').forEach(m => m.classList.add('hidden'));
+    if (open) menu.classList.remove('hidden');
+  });
+  wrap.append(btn, menu); show(value);
+  return wrap;
+}
+document.addEventListener('click', () => document.querySelectorAll('.fp-menu').forEach(m => m.classList.add('hidden')));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.fp-menu').forEach(m => m.classList.add('hidden')); });
+
+function iconSVG(x, y, c, fill, S, ring, face) {
   const ol = S.colors.outline, sw = f(c * 0.045);
   let s;
   if (S.icon === 'person') {
@@ -471,7 +555,7 @@ function iconSVG(x, y, c, fill, S, ring) {
         `<path d="M${f(x-c*.2)} ${f(y+c*.3)}V${f(y+c*.03)}Q${f(x-c*.2)} ${f(y-c*.05)} ${f(x-c*.11)} ${f(y-c*.05)}H${f(x+c*.11)}` +
         `Q${f(x+c*.2)} ${f(y-c*.05)} ${f(x+c*.2)} ${f(y+c*.03)}V${f(y+c*.3)}Z"/></g>`;
   } else {
-    s = `<circle cx="${f(x)}" cy="${f(y)}" r="${f(c*0.33)}" fill="${fill}" stroke="${ol}" stroke-width="${sw}"/>`;
+    s = `<circle cx="${f(x)}" cy="${f(y)}" r="${f(c*0.33)}" fill="${fill}" stroke="${ol}" stroke-width="${sw}"/>` + faceSVG(x, y, c * 0.33, face, fill);
   }
   if (ring) s += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(c*0.445)}" fill="none" stroke="${S.colors.ring}" stroke-width="${f(c*0.075)}"/>`;
   return s;
@@ -551,26 +635,26 @@ function build(S) {
       const cy = gridTop + row * c + Math.floor(row / 5) * g + c / 2;
       const counted = i < k[a];
       const good = counted ? countedDesirable : !countedDesirable;
-      let fill = good ? S.colors.good : S.colors.bad;
+      let cat = good ? 'good' : 'bad';
       if (i >= lo && i < hi) {
-        if (a === bandBetter && (S.highlight === 'better' || S.highlight === 'both')) fill = S.colors.extraGood;
-        if (a !== bandBetter && (S.highlight === 'worse' || S.highlight === 'both')) fill = S.colors.extraBad;
+        if (a === bandBetter && (S.highlight === 'better' || S.highlight === 'both')) cat = 'extraGood';
+        if (a !== bandBetter && (S.highlight === 'worse' || S.highlight === 'both')) cat = 'extraBad';
       }
-      parts.push(iconSVG(cx, cy, c, fill, S, i < seK[a]));
+      parts.push(iconSVG(cx, cy, c, S.colors[cat], S, i < seK[a], S.faces[cat]));
     }
   }
   y = gridTop + ah + 34 * T;
 
   // Legend
   const items = [
-    { fill: S.colors.good, label: desLabel },
-    { fill: S.colors.bad, label: undLabel }
+    { fill: S.colors.good, face: S.faces.good, label: desLabel },
+    { fill: S.colors.bad, face: S.faces.bad, label: undLabel }
   ];
   const band = hi - lo;
   if (band > 0 && (S.highlight === 'better' || S.highlight === 'both'))
-    items.push({ fill: S.colors.extraGood, label: `Extra “${desLabel}” with ${names[bandBetter]}: ${band}` });
+    items.push({ fill: S.colors.extraGood, face: S.faces.extraGood, label: `Extra “${desLabel}” with ${names[bandBetter]}: ${band}` });
   if (band > 0 && (S.highlight === 'worse' || S.highlight === 'both'))
-    items.push({ fill: S.colors.extraBad, label: `Extra “${undLabel}” with ${names[1 - bandBetter]}: ${band}` });
+    items.push({ fill: S.colors.extraBad, face: S.faces.extraBad, label: `Extra “${undLabel}” with ${names[1 - bandBetter]}: ${band}` });
   if (S.seShow) items.push({ fill: '#ffffff', ring: true, label: S.se });
 
   const lfs = 18 * T, sw = 30 * T, itemGap = 34 * T;
@@ -585,7 +669,7 @@ function build(S) {
     const total = line.reduce((s, it) => s + it.w, 0) + itemGap * (line.length - 1);
     let x = (W - total) / 2;
     for (const it of line) {
-      parts.push(iconSVG(x + sw / 2, y, sw, it.fill, S, it.ring));
+      parts.push(iconSVG(x + sw / 2, y, sw, it.fill, S, it.ring, it.face));
       parts.push(text(x + sw + 8 * T, y + lfs * 0.36, it.label, lfs, { anchor: 'start' }));
       x += it.w + itemGap;
     }
@@ -653,20 +737,22 @@ let multiRows = [];
 const EXTRA_COLORS = ['#8cc4ff', '#ff8c00', '#7b3fa0', '#8f8f8f', '#00a3a3', '#a0522d'];
 
 function buildRows() {
-  const two = mTwo(), rem = $('mRemainder').checked;
+  const two = mTwo(), rem = $('mRemainder').checked, faces = $('mFaces').checked;
   const head = $('mHead'), box = $('mRows');
-  head.className = 'mhead' + (two ? ' two' : '');
-  head.innerHTML = (two ? '<span title="Show this outcome’s NNT between the arrays">NNT</span>' : '') + '<span>Outcome</span>' + (two ? '<span>Left</span><span>Right</span>' : '<span>People</span>') + '<span>Color</span><span></span>';
+  head.className = 'mhead' + (two ? ' two' : '') + (faces ? ' faces' : '');
+  head.innerHTML = (two ? '<span title="Show this outcome’s NNT between the arrays">NNT</span>' : '') + '<span>Outcome</span>' + (two ? '<span>Left</span><span>Right</span>' : '<span>People</span>') + '<span>Color</span>' + (faces ? '<span>Face</span>' : '') + '<span></span>';
   box.innerHTML = '';
   multiRows.forEach((r, i) => {
     if (r.b === undefined) r.b = r.a;
     const div = document.createElement('div');
-    div.className = 'mrow' + (two ? ' two' : '');
+    div.className = 'mrow' + (two ? ' two' : '') + (faces ? ' faces' : '');
+    if (!r.face) r.face = 'neutral';
     div.innerHTML = (two ? '<input type="checkbox" data-k="nnt" title="Show this outcome’s NNT between the arrays" aria-label="Show NNT for this outcome">' : '') +
       '<input type="text" data-k="label" aria-label="Outcome name">' +
       '<input type="number" data-k="a" min="0" step="1" aria-label="Number of people">' +
       (two ? '<input type="number" data-k="b" min="0" step="1" aria-label="Number of people, right array">' : '') +
       '<input type="color" data-k="color" aria-label="Color">' +
+      (faces ? '<span class="fpslot"></span>' : '') +
       '<button type="button" class="mdel" title="Remove this outcome" aria-label="Remove this outcome">×</button>';
     div.querySelectorAll('input').forEach(el => {
       if (el.type === 'checkbox') {
@@ -678,6 +764,8 @@ function buildRows() {
       if (rem && i === 0 && (el.dataset.k === 'a' || el.dataset.k === 'b')) { el.readOnly = true; el.title = 'Calculated automatically from the other outcomes'; }
       el.addEventListener('input', () => { r[el.dataset.k] = el.value; });
     });
+    const slot = div.querySelector('.fpslot');
+    if (slot) slot.replaceWith(makeFacePicker(r.face, v => { r.face = v; render(); }, false));
     const del = div.querySelector('.mdel');
     del.disabled = multiRows.length <= 1;
     del.addEventListener('click', () => { multiRows.splice(i, 1); buildRows(); render(); });
@@ -720,7 +808,7 @@ function readMulti() {
     names: [$('armA').value.trim(), $('armB').value.trim()],
     title: $('title').value.trim(), subtitle: $('subtitle').value.trim(),
     shape: resolveShape($('shape').value, two), icon: $('icon').value, groups: $('groups').checked,
-    outline: $('cOutline').value, order: $('mOrder').value, nntRound: $('nntRound').value
+    outline: $('cOutline').value, order: $('mOrder').value, faces: $('mFaces').checked, nntRound: $('nntRound').value
   };
 }
 
@@ -746,6 +834,7 @@ function gridGeom(N, shape, groups) {
 
 function buildMulti(M) {
   const N = M.N, G = gridGeom(N, M.shape, M.groups);
+  const faceOf = r => M.faces ? (r.face || 'neutral') : null;
   const T = N === 100 ? 1 : 1.3, Mg = 36, muted = '#5d6675';
   const SI = { icon: M.icon, colors: { outline: M.outline, ring: '#000' } };
   const unColor = '#e9ebef';
@@ -777,17 +866,17 @@ function buildMulti(M) {
   if (M.order === 'firstLast' && order.length > 1) order.push(order.shift());
   arrX.forEach((ax, ai) => {
     const fills = [];
-    order.forEach(ri => { const r = multiRows[ri]; for (let j = 0; j < M.counts[ai][ri]; j++) fills.push(r.color); });
+    order.forEach(ri => { const r = multiRows[ri]; for (let j = 0; j < M.counts[ai][ri]; j++) fills.push(r); });
     for (let i = 0; i < N; i++) {
       const col = i % G.cols, row = Math.floor(i / G.cols);
       const cx = ax + col * G.c + Math.floor(col / 5) * G.g + G.c / 2;
       const cy = gridTop + row * G.c + Math.floor(row / 5) * G.g + G.c / 2;
-      parts.push(iconSVG(cx, cy, G.c, i < fills.length ? fills[i] : unColor, SI, false));
+      parts.push(i < fills.length ? iconSVG(cx, cy, G.c, fills[i].color, SI, false, faceOf(fills[i])) : iconSVG(cx, cy, G.c, unColor, SI, false));
     }
   });
 
   // legend: beside a single array, or between two arrays
-  const items = order.map(ri => { const r = multiRows[ri]; return { color: r.color, label: r.label || `Outcome ${ri + 1}`, counts: M.counts.map(c => c[ri]) }; });
+  const items = order.map(ri => { const r = multiRows[ri]; return { color: r.color, face: faceOf(r), label: r.label || `Outcome ${ri + 1}`, counts: M.counts.map(c => c[ri]) }; });
   if (M.unassigned.some(u => u > 0)) items.push({ color: unColor, label: 'Not assigned', counts: M.unassigned });
   const lfs = 19 * T, lh = 23 * T, sw = 34 * T, cntW = (M.two ? 56 : 72) * T;
   const labelW = M.two ? colW - 2 * cntW - sw - 8 * T : colW - sw - cntW - 8 * T;
@@ -810,7 +899,7 @@ function buildMulti(M) {
         l2 = `${a} vs ${b} per ${fmtN(N)}: ${d} fewer with ${armName(lo)}`;
         l3 = `NNT ${fmtNNT(nnt)} → 1 fewer per ${rnd(nnt).toLocaleString('en-US')} people`;
       }
-      nntItems.push({ color: r.color, l1: wrapText(label, 18 * T, colW - 30 * T, true), l2: wrapText(l2, 16 * T, colW), l3: wrapText(l3, 18 * T, colW, true) });
+      nntItems.push({ color: r.color, face: faceOf(r), l1: wrapText(label, 18 * T, colW - 30 * T, true), l2: wrapText(l2, 16 * T, colW), l3: wrapText(l3, 18 * T, colW, true) });
     });
   }
   const nlh = 22 * T;
@@ -820,7 +909,7 @@ function buildMulti(M) {
   for (const it of items) {
     const yc = ly + it.h / 2;
     const swX = M.two ? colX + cntW + sw / 2 : colX + sw / 2;
-    parts.push(iconSVG(swX, yc, sw, it.color, SI, false));
+    parts.push(iconSVG(swX, yc, sw, it.color, SI, false, it.face));
     let by = yc - (it.lines.length * lh) / 2 + lh * 0.75;
     for (const ln of it.lines) { parts.push(text(swX + sw / 2 + 6 * T, by, ln, lfs, { anchor: 'start' })); by += lh; }
     if (M.two) {
@@ -837,7 +926,7 @@ function buildMulti(M) {
     ly += 30 * T;
     for (const n of nntItems) {
       let by = ly;
-      parts.push(iconSVG(colX + 11 * T, by - 6 * T, 22 * T, n.color, SI, false));
+      parts.push(iconSVG(colX + 11 * T, by - 6 * T, 22 * T, n.color, SI, false, n.face));
       n.l1.forEach(ln => { parts.push(text(colX + 28 * T, by, ln, 18 * T, { anchor: 'start', bold: true })); by += nlh; });
       n.l2.forEach(ln => { parts.push(text(colX, by, ln, 16 * T, { anchor: 'start', color: muted })); by += nlh; });
       n.l3.forEach(ln => { parts.push(text(colX, by, ln, 18 * T, { anchor: 'start', bold: true, color: '#1d4f91' })); by += nlh; });
@@ -911,6 +1000,9 @@ function syncUI() {
       : `${a} prevents 1 “${out}” for every NNT people treated, so its rate is the baseline minus 1/NNT. If ${a} should raise the rate of “${out}” instead, check “This outcome is a good thing.”`;
   }
   $('frameOpp').textContent = $('oppLabel').value || 'Opposite';
+  const fOn = $('faceOn').checked;
+  document.querySelectorAll('.facesel').forEach(el => el.classList.toggle('hidden', !fOn));
+  document.querySelector('.colors').classList.toggle('faces', fOn);
 }
 
 function render() {
@@ -941,7 +1033,7 @@ function loadExample(key) {
   if (e.rows) { multiRows = e.rows.map(r => ({ ...r })); buildRows(); }
 }
 
-const SHARED_IDS = new Set(['preset', 'icon', 'groups', 'nntRound', 'showStats', ...Object.values(COLOR_IDS)]);
+const SHARED_IDS = new Set(['preset', 'icon', 'groups', 'nntRound', 'showStats', 'faceOn', 'fGood', 'fBad', 'fExtraGood', 'fExtraBad', ...Object.values(COLOR_IDS)]);
 function snapshot() {
   const o = {};
   $('controls').querySelectorAll('input, select').forEach(el => {
@@ -1030,7 +1122,7 @@ function setPresent(on) {
 
 $('controls').addEventListener('input', e => {
   if (e.target.id === 'example') return;
-  if (e.target.name === 'mArr' || e.target.id === 'mRemainder') buildRows();
+  if (e.target.name === 'mArr' || e.target.id === 'mRemainder' || e.target.id === 'mFaces') buildRows();
   if (e.target.id === 'preset') applyPreset(e.target.value);
   else if (Object.values(COLOR_IDS).includes(e.target.id)) $('preset').value = 'custom';
   render();
@@ -1057,6 +1149,11 @@ document.addEventListener('fullscreenchange', () => { if (!document.fullscreenEl
 
 // Initial state
 applyPreset('blue');
+$('fGood').value = 'smile'; $('fBad').value = 'frown'; $('fExtraGood').value = 'smile'; $('fExtraBad').value = 'frown';
+document.querySelectorAll('.colors .fpslot').forEach(slot => {
+  const id = slot.dataset.for;
+  slot.appendChild(makeFacePicker($(id).value, v => { $(id).value = v; render(); }, true));
+});
 buildExampleOptions();
 loadExample('abx');
 $('example').value = 'abx';
